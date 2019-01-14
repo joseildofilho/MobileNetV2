@@ -146,7 +146,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
     earlystop = EarlyStopping(monitor='val_acc',
             patience=30,
             verbose=0,
-            mode='auto'
+            mode='auto',
             restore_best_weights=True)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 

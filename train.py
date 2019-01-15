@@ -10,7 +10,7 @@ from mobilenet_v2 import MobileNetv2
 
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.layers import Conv2D, Reshape, Activation
 from keras.models import Model
 
@@ -121,6 +121,29 @@ def fine_tune(num_classes, weights, model):
 
     return model
 
+def create_callbacks():
+    """
+    # Arguments
+        None
+    """
+
+    callbacks = [
+        EarlyStopping(monitor='val_acc',
+            patience=30,
+            verbose=0,
+            mode='auto',
+            restore_best_weights=True),
+        ReduceLROnPlateau(monitor="val_loss", 
+            factor=0.5, 
+            patience=10, 
+            verbose=0,
+            mode='auto',
+            min_delta=0.00001,
+            cooldown=0,
+            min_lr=0)
+    ]
+
+    return callbacks
 
 def train(batch, epochs, num_classes, size, weights, tclasses):
     """Train the model.
@@ -142,12 +165,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
     else:
         model = MobileNetv2((size, size, 3), num_classes)
 
-    opt = Adam()
-    earlystop = EarlyStopping(monitor='val_acc',
-            patience=30,
-            verbose=0,
-            mode='auto',
-            restore_best_weights=True)
+    opt = Adam(lr=1)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 
     hist = model.fit_generator(
@@ -156,7 +174,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
         steps_per_epoch=count1 // batch,
         validation_steps=count2 // batch,
         epochs=epochs,
-        callbacks=[earlystop])
+        callbacks=create_callbacks())
 
     if not os.path.exists('model'):
         os.makedirs('model')

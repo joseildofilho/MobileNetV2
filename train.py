@@ -165,7 +165,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
     else:
         model = MobileNetv2((size, size, 3), num_classes)
 
-    opt = Adam(lr=1)
+    opt = Adam()
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 
     hist = model.fit_generator(

@@ -10,14 +10,10 @@
 from keras.models import Model
 from keras.layers import Input, Conv2D, GlobalAveragePooling2D, Dropout
 from keras.layers import Activation, BatchNormalization, add, Reshape
-from keras.layers import SeparableConv2D
-from keras.activations import relu
+from keras.layers import SeparableConv2D, ReLU
 from keras.utils.vis_utils import plot_model
 
 from keras import backend as K
-
-def relu6(x):
-    return relu(x, max_value=6)
 
 def _conv_block(inputs, filters, kernel, strides):
     """Convolution Block
@@ -41,7 +37,7 @@ def _conv_block(inputs, filters, kernel, strides):
 
     x = Conv2D(filters, kernel, padding='same', strides=strides)(inputs)
     x = BatchNormalization(axis=channel_axis)(x)
-    return Activation(relu6)(x)
+    return ReLU(max_value=6.0)(x)
 
 
 def _bottleneck(inputs, filters, kernel, t, s, r=False):
@@ -71,7 +67,7 @@ def _bottleneck(inputs, filters, kernel, t, s, r=False):
 
     x = SeparableConv2D(filters, kernel, strides=(s, s), depth_multiplier=1, padding='same')(x)
     x = BatchNormalization(axis=channel_axis)(x)
-    x = Activation(relu6)(x)
+    x = ReLU(max_value=6.0)(x)
 
     x = Conv2D(filters, (1, 1), strides=(1, 1), padding='same')(x)
     x = BatchNormalization(axis=channel_axis)(x)

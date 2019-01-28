@@ -14,6 +14,8 @@ from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from keras.layers import Conv2D, Reshape, Activation
 from keras.models import Model
 
+import tensorflow as tf
+
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -42,10 +44,15 @@ def main(argv):
         "--tclasses",
         default=0,
         help="The number of classes of pre-trained model.")
+    parser.add_argument(
+        "--tflite",
+        "-tl",
+        action="store_true",
+        help="The name of file to save the TFLite model")
 
     args = parser.parse_args()
 
-    train(int(args.batch), int(args.epochs), int(args.classes), int(args.size), args.weights, int(args.tclasses))
+    train(int(args.batch), int(args.epochs), int(args.classes), int(args.size), args.weights, int(args.tclasses), args.tflite)
 
 
 def generate(batch, size):
@@ -145,7 +152,7 @@ def create_callbacks():
 
     return callbacks
 
-def train(batch, epochs, num_classes, size, weights, tclasses):
+def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
     """Train the model.
 
     # Arguments
@@ -155,6 +162,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
         size: Integer, image size.
         weights, String, The pre_trained model weights.
         tclasses, Integer, The number of classes of pre-trained model.
+        tflite, Boolean, Convert the final model to a tflite model
     """
 
     train_generator, validation_generator, count1, count2 = generate(batch, size)
@@ -181,8 +189,30 @@ def train(batch, epochs, num_classes, size, weights, tclasses):
 
     df = pd.DataFrame.from_dict(hist.history)
     df.to_csv('model/hist.csv', encoding='utf-8', index=False)
+    print("Saving weights")
     model.save_weights('model/weights.h5')
+    
+    
+    model_name = "mobile_model.h5"
 
+    if tflite:
+        print("Saving model")
+        model.save(model_name)
+        print("Converting model")
+        convert_to_lite(model_name)
+
+
+def convert_to_lite(model, tflite_name="converted_model"):
+    """
+        Convert a saved model to tf lite format.
+
+        # Arguments
+            model: String, path to .h5 file model
+    """
+    tflite_name += ".tflite"
+    converter = tf.contrib.lite.TFLiteConverter.from_keras_model_file(model)
+    tflite_model = converter.convert()
+    open(tflite_name, "wb").write(tflite_model)
 
 if __name__ == '__main__':
     main(sys.argv)

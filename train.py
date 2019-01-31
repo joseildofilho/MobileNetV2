@@ -128,6 +128,10 @@ def fine_tune(num_classes, weights, model):
 
     return model
 
+def keep_training(weights, model):
+    model.load_weights(weights)
+    return model
+
 def create_callbacks():
     """
     # Arguments
@@ -168,8 +172,13 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
     train_generator, validation_generator, count1, count2 = generate(batch, size)
 
     if weights:
-        model = MobileNetv2((size, size, 3), tclasses)
-        model = fine_tune(num_classes, weights, model)
+        if tclasses:
+            model = MobileNetv2((size, size, 3), tclasses)
+            model = fine_tune(num_classes, weights, model)
+        else:
+            model = MobileNetv2((size, size, 3), num_classes)
+            model = keep_training(weights, model)
+
     else:
         model = MobileNetv2((size, size, 3), num_classes)
 

@@ -16,6 +16,9 @@ from keras.models import Model
 
 import tensorflow as tf
 
+from sklearn.metrics import classification_report
+
+import numpy as np
 
 def main(argv):
     parser = argparse.ArgumentParser()
@@ -156,6 +159,28 @@ def create_callbacks():
 
     return callbacks
 
+def generate_report(model, generator, batch, count):
+    y_pred = model.predict_generator(generator, steps= count//batch)
+    
+    list_ = []
+
+    b = count//batch
+
+    for i in range(b):
+        aux = generator[i]
+        aux2 = 0
+        for j in aux:
+            aux2 += 1
+            if aux2 % 2 == 0:
+                for k in j:
+                    list_.append(k.tolist())
+    labels = [ i[0] for i in sorted(generator.class_indices.items(), key=lambda x: x[1])]
+    print(classification_report(
+        np.argmax(list_, axis=1),
+        np.argmax(y_pred, axis=1),
+        target_names = labels
+        ))
+
 def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
     """Train the model.
 
@@ -173,9 +198,11 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
 
     if weights:
         if tclasses:
+            print("fine tunning")
             model = MobileNetv2((size, size, 3), tclasses)
             model = fine_tune(num_classes, weights, model)
         else:
+            print("Loading Weights")
             model = MobileNetv2((size, size, 3), num_classes)
             model = keep_training(weights, model)
 
@@ -192,6 +219,8 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
         validation_steps=count2 // batch,
         epochs=epochs,
         callbacks=create_callbacks())
+    
+    generate_report(model, validation_generator, batch, count2)
 
     if not os.path.exists('model'):
         os.makedirs('model')
@@ -200,8 +229,7 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
     df.to_csv('model/hist.csv', encoding='utf-8', index=False)
     print("Saving weights")
     model.save_weights('model/weights.h5')
-    
-    
+     
     model_name = "mobile_model.h5"
 
     if tflite:

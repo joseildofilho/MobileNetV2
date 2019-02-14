@@ -220,8 +220,6 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
         epochs=epochs,
         callbacks=create_callbacks())
     
-    generate_report(model, validation_generator, batch, count2)
-
     if not os.path.exists('model'):
         os.makedirs('model')
 

@@ -10,7 +10,7 @@ from mobilenet_v2 import MobileNetv2
 
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.layers import Conv2D, Reshape, Activation
 from keras.models import Model
 
@@ -52,10 +52,22 @@ def main(argv):
         "-tl",
         action="store_true",
         help="The name of file to save the TFLite model")
+    parser.add_argument(
+            "--checkpoint",
+            default="",
+            help='Defines the path to save the checkpoints'
+            )
 
     args = parser.parse_args()
 
-    train(int(args.batch), int(args.epochs), int(args.classes), int(args.size), args.weights, int(args.tclasses), args.tflite)
+    train(int(args.batch), 
+            int(args.epochs), 
+            int(args.classes), 
+            int(args.size), 
+            args.weights, 
+            int(args.tclasses), 
+            args.tflite,
+            args.checkpoint)
 
 
 def generate(batch, size):
@@ -135,7 +147,7 @@ def keep_training(weights, model):
     model.load_weights(weights)
     return model
 
-def create_callbacks():
+def create_callbacks(model_checkpoint=""):
     """
     # Arguments
         None
@@ -144,18 +156,26 @@ def create_callbacks():
     callbacks = [
         EarlyStopping(monitor='val_acc',
             patience=30,
-            verbose=0,
+            verbose=1,
             mode='auto',
             restore_best_weights=True),
         ReduceLROnPlateau(monitor="val_loss", 
             factor=0.5, 
             patience=10, 
-            verbose=0,
+            verbose=1,
             mode='auto',
             min_delta=0.00001,
             cooldown=0,
             min_lr=0)
     ]
+    if model_checkpoint:
+        callbacks.append(
+                ModelCheckpoint(
+                        model_checkpoint + 'weights-{epoch:02d}-{val_loss:.2f}-{val_acc:.3f}.hdf5',
+                        verbose=1,
+                        save_best_only=True
+                    )
+                )
 
     return callbacks
 
@@ -181,7 +201,7 @@ def generate_report(model, generator, batch, count):
         target_names = labels
         ))
 
-def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
+def train(batch, epochs, num_classes, size, weights, tclasses, tflite, checkpoint):
     """Train the model.
 
     # Arguments
@@ -191,7 +211,8 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
         size: Integer, image size.
         weights, String, The pre_trained model weights.
         tclasses, Integer, The number of classes of pre-trained model.
-        tflite, Boolean, Convert the final model to a tflite model
+        tflite, Boolean, Convert the final model to a tflite model.
+        checkpoint, String, The path to store the checktpoints
     """
 
     train_generator, validation_generator, count1, count2 = generate(batch, size)
@@ -212,13 +233,15 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite):
     opt = Adam()
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 
+    calls = create_callbacks(model_checkpoint = checkpoint)
+
     hist = model.fit_generator(
         train_generator,
         validation_data=validation_generator,
         steps_per_epoch=count1 // batch,
         validation_steps=count2 // batch,
         epochs=epochs,
-        callbacks=create_callbacks())
+        callbacks=calls)
     
     if not os.path.exists('model'):
         os.makedirs('model')

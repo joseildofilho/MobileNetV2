@@ -207,7 +207,7 @@ def generate_report(model, generator, batch, count):
         target_names = labels
         ))
 
-def model_feed(num_classes, size):
+def model_feed(size, num_classes):
     ''' 
 
     Wrapper the model creation

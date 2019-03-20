@@ -69,6 +69,10 @@ def main(argv):
             args.tflite,
             args.checkpoint)
 
+def save_map_labels(data):
+    with open('labels.json', 'w') as f:
+        f.write(str(data))
+        f.flush()
 
 def generate(batch, size):
     """Data generation and augmentation
@@ -104,6 +108,8 @@ def generate(batch, size):
         target_size=(size, size),
         batch_size=batch,
         class_mode='categorical')
+
+    save_map_labels(train_generator.class_indices)
 
     validation_generator = datagen2.flow_from_directory(
         pval,
@@ -201,6 +207,23 @@ def generate_report(model, generator, batch, count):
         target_names = labels
         ))
 
+def model_feed(num_classes, size):
+    ''' 
+
+    Wrapper the model creation
+    
+    #Arguments
+        num_classes: Integer, The number of classes to create a model.
+        size: tuple, The shape of the data.
+
+    #Return:
+        The model
+    
+    '''
+
+    return MobileNetv2(size, num_classes)
+
+
 def train(batch, epochs, num_classes, size, weights, tclasses, tflite, checkpoint):
     """Train the model.
 
@@ -220,15 +243,15 @@ def train(batch, epochs, num_classes, size, weights, tclasses, tflite, checkpoin
     if weights:
         if tclasses:
             print("fine tunning")
-            model = MobileNetv2((size, size, 3), tclasses)
+            model = model_feed((size, size, 3), tclasses)
             model = fine_tune(num_classes, weights, model)
         else:
             print("Loading Weights")
-            model = MobileNetv2((size, size, 3), num_classes)
+            model = model_feed((size, size, 3), num_classes)
             model = keep_training(weights, model)
 
     else:
-        model = MobileNetv2((size, size, 3), num_classes)
+        model = model_feed((size, size, 3), num_classes)
 
     opt = Adam()
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
